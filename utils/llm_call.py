@@ -2,6 +2,9 @@ import os
 import httpx
 from typing import Any
 import json
+from motor.motor_asyncio import AsyncIOMotorClient
+
+mongo_client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
 
 def create_req_body (patient_name:str, query:str) -> Any:
     return json.dumps({
@@ -56,3 +59,30 @@ async def make_llm_request(patient_name: str, query: str) -> str:
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
             raise e
+        
+async def get_details_mongo(start_range: int, end_range: int, units: str, query_string: str) -> Any:
+    """
+        This function returns all the documents from mongo db given an age range and age units (months/ years)
+    """
+    db = mongo_client[os.getenv("DB_NAME")]
+    collection = db[os.getenv("COLLECTION")]
+    pipeline = [
+        {
+            "$search": {
+                "index": "default",
+                "text": {
+                    "query": query_string,
+                    "path": "condition",
+                    "fuzzy": {}
+                }
+            }
+        },
+        {
+            "$match": {
+                "value": {"$gte": start_range, "$lte": end_range},
+                "unit": units
+            }
+        }
+    ]
+    cursor = collection.aggregate(pipeline)
+    return await cursor.to_list(length=None)

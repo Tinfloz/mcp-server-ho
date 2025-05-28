@@ -1,5 +1,5 @@
 from server import mcp
-from utils.llm_call import make_llm_request
+from utils.llm_call import make_llm_request, get_details_mongo
 
 @mcp.tool()
 async def answer_doctor_queries(patient_name:str, query:str) -> str:
@@ -34,3 +34,23 @@ async def answer_doctor_queries(patient_name:str, query:str) -> str:
         'John Doe has back pain.'
     """
     return await make_llm_request(patient_name, query)
+
+@mcp.tool()
+async def get_patient_analytics(start_range_age: int, end_range_age: int, units: str, condition: str):
+    """
+    Retrieves patient records from a MongoDB collection filtered by age range and units,
+    then asynchronously processes each patient’s data to determine if they meet a specified condition.
+
+    The function performs the following steps:
+    1. Queries the MongoDB collection for patients whose age is between `start_range_age` and `end_range_age`
+       and whose age unit matches `units` ("years" or "months") and has a similarity to the condition stated in the query.
+    Args:
+        start_range_age (int): The minimum age (inclusive) for filtering patients.
+        end_range_age (int): The maximum age (inclusive) for filtering patients.
+        units (str): The age unit to filter by, typically "years" or "months".
+        condition (str): The medical condition query to evaluate for each patient.
+
+    Returns:
+        list[str]: A list of patient names who meet the specified condition.
+    """
+    return await get_details_mongo(start_range_age, end_range_age, units, condition)
